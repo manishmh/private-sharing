@@ -12,6 +12,7 @@
 databases:
   - name: vault-db
     plan: free
+    region: singapore          # must match the web service region for the internal URL
     databaseName: vault
     user: vault
 
@@ -20,6 +21,7 @@ services:
     name: vault
     runtime: docker
     plan: free
+    region: singapore          # change both to your region (oregon/frankfurt/ohio/virginia/singapore)
     dockerfilePath: ./Dockerfile
     dockerContext: .
     healthCheckPath: /api/health

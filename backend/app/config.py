@@ -1,4 +1,5 @@
 """Application settings, loaded from environment / backend/.env."""
+import os
 from functools import lru_cache
 from pathlib import Path
 
@@ -80,7 +81,16 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     s = Settings()
-    # Ensure the local image directories exist on startup.
+    # On Render (sets RENDER=true), a localhost DB URL means DATABASE_URL was never
+    # injected — fail loudly with the fix instead of a cryptic psycopg traceback.
+    if os.getenv("RENDER") and ("@localhost" in s.database_url or "127.0.0.1" in s.database_url):
+        raise RuntimeError(
+            "DATABASE_URL is not set on this Render service — it fell back to the local "
+            "default (127.0.0.1). Fix: deploy via the render.yaml Blueprint (New > Blueprint), "
+            "OR create a Render Postgres and add its Internal Connection String as the "
+            "DATABASE_URL env var on this service, then redeploy."
+        )
+    # Ensure the image directories exist on startup.
     s.masters_dir.mkdir(parents=True, exist_ok=True)
     s.watermark_dir.mkdir(parents=True, exist_ok=True)
     return s
