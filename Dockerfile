@@ -24,5 +24,6 @@ COPY backend/ ./
 COPY --from=frontend /fe/dist ./static
 
 EXPOSE 8000
-# Apply migrations, then serve. $PORT is provided by the host (Render); default 8000.
-CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Migrate + serve via a real shell script (see backend/start.sh) so the host never
+# has to expand ${PORT} itself.
+CMD ["sh", "/app/start.sh"]
