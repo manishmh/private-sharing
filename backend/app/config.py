@@ -81,16 +81,18 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     s = Settings()
-    # On a managed host (Render/Railway), a localhost DB URL means DATABASE_URL was
-    # never injected — fail loudly with the fix instead of a cryptic psycopg trace.
+    # On a managed host (Render/Railway) an EMPTY or localhost DATABASE_URL means it
+    # wasn't injected / a ${{ }} reference didn't resolve — fail loudly with the fix
+    # instead of a cryptic SQLAlchemy "Could not parse URL from ''" trace.
+    db_url = (s.database_url or "").strip()
     on_platform = os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RENDER")
-    if on_platform and ("@localhost" in s.database_url or "127.0.0.1" in s.database_url):
+    if (not db_url) or (on_platform and ("@localhost" in db_url or "127.0.0.1" in db_url)):
         raise RuntimeError(
-            "DATABASE_URL is not set on this deployment — it fell back to the local default "
-            "(127.0.0.1). Railway: add a PostgreSQL service, then set this service's "
-            "DATABASE_URL variable to ${{ Postgres.DATABASE_URL }}. Render: deploy via the "
-            "render.yaml Blueprint, or set DATABASE_URL to the DB's Internal Connection "
-            "String. Then redeploy."
+            "DATABASE_URL is empty or unset on this deployment. Railway: make sure a "
+            "PostgreSQL service exists, then set this service's DATABASE_URL with "
+            "'Add Reference' -> Postgres -> DATABASE_URL (typing the reference by hand "
+            "resolves to EMPTY if the Postgres service name differs). Render: use the "
+            "render.yaml Blueprint or the DB's Internal Connection String. Then redeploy."
         )
     # Ensure the image directories exist on startup.
     s.masters_dir.mkdir(parents=True, exist_ok=True)
