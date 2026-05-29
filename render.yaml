@@ -1,0 +1,44 @@
+# Render Blueprint — deploys Vault as one Docker web service + a free Postgres.
+# In Render: New → Blueprint → connect this repo. Spec: https://render.com/docs/blueprint-spec
+#
+# FREE-TIER CAVEATS:
+#  * No persistent disk on free web services, and the service sleeps after ~15 min
+#    idle. On every restart/redeploy the container filesystem (DATA_DIR=/data) is
+#    WIPED — uploaded PDFs/master images are lost, so existing catalogs break even
+#    though their DB rows remain. Fine for a quick demo; for durability move image
+#    storage to object storage (Cloudflare R2 / Supabase) or use a paid disk.
+#  * Free Postgres is time-limited by Render and may expire.
+
+databases:
+  - name: vault-db
+    plan: free
+    databaseName: vault
+    user: vault
+
+services:
+  - type: web
+    name: vault
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL          # normalized to postgresql+psycopg:// in app/config.py
+        fromDatabase:
+          name: vault-db
+          property: connectionString
+      - key: DATA_DIR
+        value: /data
+      - key: STATIC_DIR
+        value: /app/static
+      - key: COOKIE_SECURE         # HTTPS-only device cookie
+        value: "true"
+      - key: ADMIN_AUTH_ENABLED    # require Basic auth on /admin + /api/admin
+        value: "true"
+      - key: ADMIN_PASSWORD        # set a strong value in the Render dashboard
+        sync: false
+      - key: WATERMARK_VISIBLE
+        value: "false"
+      - key: CORS_ORIGINS          # same-origin in prod; no cross-origin allowed
+        value: ""

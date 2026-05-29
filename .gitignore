@@ -1,0 +1,16 @@
+# Local data (images: clean masters + watermark cache) — never committed.
+/data/
+
+# Python
+backend/.venv/
+__pycache__/
+*.pyc
+backend/.env
+
+# Node / Vite
+frontend/node_modules/
+frontend/dist/
+
+# Editor / OS
+.DS_Store
+*.log
